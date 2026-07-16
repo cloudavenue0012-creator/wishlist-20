@@ -9,50 +9,62 @@
   }
 
   :root {
-    --paper: #f2ecdd;
-    --paper-card: #fbf8ef;
-    --line: #dcd2b8;
-    --ink: #2a2620;
-    --ink-soft: #8a7f68;
-    --accent: #1f6357;
-    --accent-wash: #dceae6;
-    --shadow: rgba(42, 38, 32, 0.10);
+    --bg1: #ffefe0;
+    --bg2: #ffe1ec;
+    --bg3: #fff6dc;
+    --card: #fffbf2;
+    --line: #f2d9c4;
+    --ink: #4a3b33;
+    --ink-soft: #b79c89;
+    --accent: #ff6f81;
+    --accent-wash: #ffe3e7;
+    --shadow: rgba(120, 70, 60, 0.16);
+    --mark: #fff8ee;
     color-scheme: light;
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --paper: #1e1b16;
-      --paper-card: #26221a;
-      --line: #3c362a;
-      --ink: #ede6d6;
-      --ink-soft: #a89e88;
-      --accent: #4fb39f;
-      --accent-wash: #1d332f;
-      --shadow: rgba(0, 0, 0, 0.35);
+      --bg1: #241a1e;
+      --bg2: #2b1e28;
+      --bg3: #231c14;
+      --card: #2b2220;
+      --line: #4a382f;
+      --ink: #f5e9de;
+      --ink-soft: #c2a892;
+      --accent: #ff8fa3;
+      --accent-wash: #3a2530;
+      --shadow: rgba(0, 0, 0, 0.4);
+      --mark: #241a1e;
       color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
-    --paper: #1e1b16;
-    --paper-card: #26221a;
-    --line: #3c362a;
-    --ink: #ede6d6;
-    --ink-soft: #a89e88;
-    --accent: #4fb39f;
-    --accent-wash: #1d332f;
-    --shadow: rgba(0, 0, 0, 0.35);
+    --bg1: #241a1e;
+    --bg2: #2b1e28;
+    --bg3: #231c14;
+    --card: #2b2220;
+    --line: #4a382f;
+    --ink: #f5e9de;
+    --ink-soft: #c2a892;
+    --accent: #ff8fa3;
+    --accent-wash: #3a2530;
+    --shadow: rgba(0, 0, 0, 0.4);
+    --mark: #241a1e;
     color-scheme: dark;
   }
   :root[data-theme="light"] {
-    --paper: #f2ecdd;
-    --paper-card: #fbf8ef;
-    --line: #dcd2b8;
-    --ink: #2a2620;
-    --ink-soft: #8a7f68;
-    --accent: #1f6357;
-    --accent-wash: #dceae6;
-    --shadow: rgba(42, 38, 32, 0.10);
+    --bg1: #ffefe0;
+    --bg2: #ffe1ec;
+    --bg3: #fff6dc;
+    --card: #fffbf2;
+    --line: #f2d9c4;
+    --ink: #4a3b33;
+    --ink-soft: #b79c89;
+    --accent: #ff6f81;
+    --accent-wash: #ffe3e7;
+    --shadow: rgba(120, 70, 60, 0.16);
+    --mark: #fff8ee;
     color-scheme: light;
   }
 
@@ -66,7 +78,7 @@
   body {
     margin: 0;
     min-height: 100vh;
-    background: var(--paper);
+    background: linear-gradient(165deg, var(--bg1) 0%, var(--bg2) 48%, var(--bg3) 100%);
     color: var(--ink);
     font-family: "Apple SD Gothic Neo", "Malgun Gothic", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     display: flex;
@@ -75,22 +87,36 @@
   }
 
   .card {
+    position: relative;
     width: 100%;
     max-width: 460px;
-    background: var(--paper-card);
-    border: 1px solid var(--line);
-    border-radius: 18px;
-    box-shadow: 0 18px 40px -24px var(--shadow), 0 2px 0 var(--line);
+    background: var(--card);
+    border: 2px dotted var(--line);
+    border-radius: 22px;
+    box-shadow: 0 20px 44px -26px var(--shadow), 0 2px 0 var(--line);
     overflow: hidden;
   }
 
   .card-head {
-    padding: 28px 26px 22px;
+    position: relative;
+    padding: 30px 26px 22px;
     border-bottom: 1px dashed var(--line);
+    overflow: hidden;
   }
 
+  .doodle {
+    position: absolute;
+    pointer-events: none;
+  }
+  .doodle-flower { top: 10px; left: 14px; width: 26px; height: 26px; fill: #3fbf96; opacity: 0.9; transform: rotate(-8deg); }
+  .doodle-star { top: 8px; right: 16px; width: 30px; height: 30px; fill: #ffb238; opacity: 0.95; transform: rotate(14deg); }
+  .doodle-spark {
+    top: 46px; right: 20px; width: 16px; height: 16px; opacity: 0.85;
+  }
+  .doodle-spark path { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linecap: round; }
+
   .eyebrow {
-    margin: 0 0 10px;
+    margin: 0 0 12px;
     font-family: "LedgerMono", ui-monospace, "Consolas", monospace;
     font-size: 12px;
     letter-spacing: 0.22em;
@@ -101,10 +127,30 @@
   h1 {
     margin: 0 0 8px;
     font-size: clamp(24px, 6vw, 28px);
-    line-height: 1.28;
-    font-weight: 700;
+    line-height: 1.32;
+    font-weight: 800;
     text-wrap: balance;
     letter-spacing: -0.01em;
+    position: relative;
+    z-index: 1;
+  }
+
+  h1 .hl {
+    position: relative;
+    display: inline-block;
+  }
+
+  h1 .hl::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    right: -5px;
+    bottom: 3px;
+    top: 42%;
+    background: var(--accent-wash);
+    border-radius: 7px;
+    transform: rotate(-1.6deg);
+    z-index: -1;
   }
 
   .sub {
@@ -113,19 +159,23 @@
     line-height: 1.6;
     color: var(--ink-soft);
     max-width: 34ch;
+    position: relative;
+    z-index: 1;
   }
 
   .progress {
     display: flex;
     align-items: center;
     gap: 12px;
+    position: relative;
+    z-index: 1;
   }
 
   .progress-track {
     flex: 1;
-    height: 6px;
+    height: 7px;
     border-radius: 999px;
-    background: var(--line);
+    background: var(--accent-wash);
     overflow: hidden;
   }
 
@@ -172,7 +222,7 @@
     transition: color 0.2s ease;
   }
 
-  .row.done .idx { color: var(--accent); }
+  .row.done .idx { color: var(--row-stamp, var(--accent)); }
 
   .text-input {
     width: 100%;
@@ -190,7 +240,7 @@
 
   .text-input:focus {
     outline: none;
-    border-bottom-color: var(--accent);
+    border-bottom-color: var(--row-stamp, var(--accent));
   }
 
   .row.done .text-input {
@@ -203,12 +253,13 @@
   .stamp {
     justify-self: end;
     position: relative;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    overflow: visible;
   }
 
   .stamp-input {
@@ -217,6 +268,7 @@
     opacity: 0;
     margin: 0;
     cursor: pointer;
+    z-index: 2;
   }
 
   .stamp-mark {
@@ -241,16 +293,16 @@
 
   .stamp-mark svg path {
     fill: none;
-    stroke: var(--paper-card);
+    stroke: var(--mark);
     stroke-width: 2.6;
     stroke-linecap: round;
     stroke-linejoin: round;
   }
 
   .stamp-input:checked + .stamp-mark {
-    background: var(--accent);
-    border-color: var(--accent);
-    transform: scale(1.04);
+    background: var(--row-stamp, var(--accent));
+    border-color: var(--row-stamp, var(--accent));
+    transform: scale(1.08);
   }
 
   .stamp-input:checked + .stamp-mark svg {
@@ -264,6 +316,24 @@
   }
 
   .text-input:focus-visible { outline: none; }
+
+  .confetti-bit {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: confetti-pop 0.6s ease-out forwards;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  @keyframes confetti-pop {
+    0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx, 20px)), calc(-50% + var(--dy, 20px))) scale(0.3); opacity: 0; }
+  }
 
   .card-foot {
     padding: 20px 26px 26px;
@@ -279,7 +349,7 @@
     border-radius: 999px;
     border: none;
     background: var(--accent);
-    color: var(--paper-card);
+    color: var(--mark);
     font-size: 15px;
     font-weight: 700;
     font-family: inherit;
@@ -306,7 +376,7 @@
     bottom: 22px;
     transform: translateX(-50%) translateY(12px);
     background: var(--ink);
-    color: var(--paper-card);
+    color: var(--card);
     padding: 10px 18px;
     border-radius: 999px;
     font-size: 13px;
@@ -322,16 +392,27 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .progress-fill, .stamp-mark, .stamp-mark svg, .share-btn, .toast {
+    .progress-fill, .stamp-mark, .stamp-mark svg, .share-btn, .toast, .confetti-bit {
       transition: none !important;
+      animation: none !important;
     }
   }
 </style>
 
 <div class="card">
   <header class="card-head">
+    <svg class="doodle doodle-flower" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="7" r="3.2"/><circle cx="12" cy="17" r="3.2"/><circle cx="7" cy="12" r="3.2"/><circle cx="17" cy="12" r="3.2"/><circle cx="12" cy="12" r="2.8" fill="#ffd166"/>
+    </svg>
+    <svg class="doodle doodle-star" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 2 L14.4 9 L22 9.5 L16 14 L18 21.5 L12 17 L6 21.5 L8 14 L2 9.5 L9.6 9 Z"/>
+    </svg>
+    <svg class="doodle doodle-spark" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 2 L12 8 M12 16 L12 22 M2 12 L8 12 M16 12 L22 12"/>
+    </svg>
+
     <p class="eyebrow">Personal Wish List</p>
-    <h1>내가 하고 싶은 20가지</h1>
+    <h1>내가 하고 싶은 <span class="hl">20가지</span></h1>
     <p class="sub">체크할 건 눌러서 표시하고, 빈 칸엔 하고 싶은 일을 적어보세요.</p>
     <div class="progress">
       <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
@@ -352,6 +433,7 @@
 <script>
   (function () {
     var STORAGE_KEY = "wishlist20-v1";
+    var STAMP_COLORS = ["#ff6f81", "#ffb238", "#3fbf96", "#4fa8d8", "#b07cd9", "#ff9466"];
 
     var defaults = [
       { text: "카시오 시계", done: true },
@@ -386,6 +468,7 @@
     var progressCount = document.getElementById("progressCount");
     var toastEl = document.getElementById("toast");
     var toastTimer = null;
+    var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     function pad2(n) {
       return n < 10 ? "0" + n : String(n);
@@ -398,11 +481,32 @@
         '<span class="num">' + done + '</span> / <span class="num">20</span> 완료';
     }
 
+    function burstConfetti(stampEl, color) {
+      if (reduceMotion) return;
+      var palette = [color, "#ffd166", "#ff6f81", "#3fbf96"];
+      for (var k = 0; k < 6; k++) {
+        var bit = document.createElement("span");
+        bit.className = "confetti-bit";
+        var angle = (Math.PI * 2 * k) / 6 + (Math.random() * 0.6 - 0.3);
+        var dist = 16 + Math.random() * 10;
+        bit.style.setProperty("--dx", Math.cos(angle) * dist + "px");
+        bit.style.setProperty("--dy", Math.sin(angle) * dist + "px");
+        bit.style.background = palette[k % palette.length];
+        stampEl.appendChild(bit);
+        (function (el) {
+          setTimeout(function () { el.remove(); }, 650);
+        })(bit);
+      }
+    }
+
     function render() {
       listEl.innerHTML = "";
       items.forEach(function (item, i) {
+        var stampColor = STAMP_COLORS[i % STAMP_COLORS.length];
+
         var li = document.createElement("li");
         li.className = "row" + (item.done ? " done" : "");
+        li.style.setProperty("--row-stamp", stampColor);
 
         var idx = document.createElement("span");
         idx.className = "idx";
@@ -430,6 +534,7 @@
         checkbox.addEventListener("change", function () {
           items[i].done = checkbox.checked;
           li.classList.toggle("done", checkbox.checked);
+          if (checkbox.checked) burstConfetti(stampLabel, stampColor);
           updateProgress();
           saveItems();
         });
@@ -462,7 +567,7 @@
     function buildShareText() {
       var done = items.filter(function (it) { return it.done; }).length;
       var lines = items.map(function (it, i) {
-        var mark = it.done ? "✅" : "⬜";
+        var mark = it.done ? "[x]" : "[ ]";
         var label = it.text && it.text.trim() ? it.text.trim() : "(미입력)";
         return mark + " " + pad2(i + 1) + ". " + label;
       });
