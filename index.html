@@ -111,7 +111,7 @@
   }
 
   .sub {
-    margin: 0 0 20px;
+    margin: 0 0 18px;
     font-size: 14px;
     line-height: 1.6;
     color: var(--ink-soft);
@@ -154,6 +154,55 @@
 
   .progress-count .num { color: var(--ink); }
 
+  .total-row {
+    margin-top: 14px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 11px 14px;
+    background: var(--accent-wash);
+    border-radius: 12px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .total-label {
+    font-size: 12px;
+    color: var(--ink-soft);
+    letter-spacing: 0.02em;
+  }
+
+  .total-value {
+    font-family: "LedgerMono", ui-monospace, "Consolas", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .sync-status {
+    margin: 10px 2px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--ink-soft);
+    position: relative;
+    z-index: 1;
+    min-height: 14px;
+  }
+
+  .sync-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3fbf96;
+    flex: none;
+  }
+
+  .sync-status.saving .sync-dot { background: #ffb238; }
+  .sync-status.offline .sync-dot { background: #cfc2b4; }
+
   .list {
     list-style: none;
     margin: 0;
@@ -162,9 +211,9 @@
 
   .row {
     display: grid;
-    grid-template-columns: 30px 1fr 40px;
+    grid-template-columns: 26px 1fr 82px 36px;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     padding: 13px 6px;
     border-bottom: 1px dashed var(--line);
   }
@@ -201,6 +250,50 @@
   }
 
   .row.done .text-input {
+    color: var(--ink-soft);
+    text-decoration: line-through;
+    text-decoration-color: var(--ink-soft);
+    text-decoration-thickness: 1.5px;
+  }
+
+  .amount-wrap {
+    position: relative;
+    min-width: 0;
+  }
+
+  .amount-input {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid transparent;
+    background: transparent;
+    color: var(--ink);
+    font-family: "LedgerMono", ui-monospace, "Consolas", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 12.5px;
+    text-align: right;
+    padding: 4px 14px 4px 2px;
+    min-width: 0;
+  }
+
+  .amount-input::placeholder { color: var(--ink-soft); opacity: 0.55; }
+
+  .amount-input:focus {
+    outline: none;
+    border-bottom-color: var(--row-stamp, var(--accent));
+  }
+
+  .amount-wrap::after {
+    content: "원";
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    pointer-events: none;
+  }
+
+  .row.done .amount-input {
     color: var(--ink-soft);
     text-decoration: line-through;
     text-decoration-color: var(--ink-soft);
@@ -370,18 +463,23 @@
 
     <p class="eyebrow">Personal Wish List</p>
     <h1>내가 하고 싶은 <span class="hl">20가지</span></h1>
-    <p class="sub">체크할 건 눌러서 표시하고, 빈 칸엔 하고 싶은 일을 적어보세요.</p>
+    <p class="sub">체크할 건 눌러서 표시하고, 빈 칸엔 하고 싶은 일과 예상 금액을 적어보세요. 저장하면 이 링크를 보는 누구나 최신 내용을 볼 수 있어요.</p>
     <div class="progress">
       <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
       <span class="progress-count" id="progressCount">0 / 20 완료</span>
     </div>
+    <div class="total-row">
+      <span class="total-label">총 금액 합계</span>
+      <span class="total-value" id="totalValue">0원</span>
+    </div>
+    <p class="sync-status" id="syncStatus"><span class="sync-dot"></span><span id="syncText">불러오는 중…</span></p>
   </header>
 
   <ol class="list" id="list"></ol>
 
   <footer class="card-foot">
     <button class="share-btn" id="shareBtn" type="button">공유하기</button>
-    <p class="foot-note">체크·입력 내용은 이 기기(브라우저)에만 저장돼요. 공유 버튼을 누르면 지금까지 쓴 내용을 보낼 수 있어요.</p>
+    <p class="foot-note">체크·입력 내용은 저장 즉시 서버에 반영되어, 이 페이지 링크를 아는 사람은 누구나 같은 내용을 봅니다.</p>
   </footer>
 </div>
 
@@ -389,40 +487,57 @@
 
 <script>
   (function () {
-    var STORAGE_KEY = "wishlist20-v1";
+    var API_BASE = "https://wishlist-20-api.ethan-yoon.workers.dev";
+    var CACHE_KEY = "wishlist20-cache-v2";
     var STAMP_COLORS = ["#ff6f81", "#ffb238", "#3fbf96", "#4fa8d8", "#b07cd9", "#ff9466"];
+    var POLL_MS = 20000;
 
     var defaults = [
-      { text: "카시오 시계", done: true },
-      { text: "동대문 비즈가게", done: false }
+      { text: "카시오 시계", amount: 0, done: true },
+      { text: "동대문 비즈가게", amount: 0, done: false }
     ];
-    while (defaults.length < 20) defaults.push({ text: "", done: false });
+    while (defaults.length < 20) defaults.push({ text: "", amount: 0, done: false });
 
-    function loadItems() {
+    function normalize(list) {
+      if (!Array.isArray(list) || list.length !== 20) return null;
+      return list.map(function (it) {
+        return {
+          text: typeof it.text === "string" ? it.text : "",
+          amount: Number.isFinite(it.amount) ? it.amount : 0,
+          done: !!it.done
+        };
+      });
+    }
+
+    function loadCache() {
       try {
-        var raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return defaults.slice();
-        var parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed) || parsed.length !== 20) return defaults.slice();
-        return parsed.map(function (it) {
-          return { text: typeof it.text === "string" ? it.text : "", done: !!it.done };
-        });
+        var raw = localStorage.getItem(CACHE_KEY);
+        if (!raw) return null;
+        return normalize(JSON.parse(raw));
       } catch (e) {
-        return defaults.slice();
+        return null;
       }
     }
 
-    function saveItems() {
+    function saveCache() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+        localStorage.setItem(CACHE_KEY, JSON.stringify(items));
       } catch (e) {}
     }
 
-    var items = loadItems();
+    var items = loadCache() || defaults.slice();
+    var lastUpdatedAt = null;
+    var syncing = false;
+    var pendingSave = false;
+    var saveTimer = null;
+    var isOnline = true;
 
     var listEl = document.getElementById("list");
     var progressFill = document.getElementById("progressFill");
     var progressCount = document.getElementById("progressCount");
+    var totalValueEl = document.getElementById("totalValue");
+    var syncStatusEl = document.getElementById("syncStatus");
+    var syncTextEl = document.getElementById("syncText");
     var toastEl = document.getElementById("toast");
     var toastTimer = null;
     var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -431,11 +546,45 @@
       return n < 10 ? "0" + n : String(n);
     }
 
+    function formatWon(n) {
+      return n.toLocaleString("ko-KR") + "원";
+    }
+
+    function formatTime(iso) {
+      try {
+        var d = new Date(iso);
+        return (d.getMonth() + 1) + "/" + d.getDate() + " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+      } catch (e) {
+        return "";
+      }
+    }
+
+    function setSyncStatus(mode, text) {
+      syncStatusEl.className = "sync-status" + (mode ? " " + mode : "");
+      syncTextEl.textContent = text;
+    }
+
+    function anyInputFocused() {
+      var active = document.activeElement;
+      return active && listEl.contains(active);
+    }
+
     function updateProgress() {
       var done = items.filter(function (it) { return it.done; }).length;
       progressFill.style.width = (done / 20) * 100 + "%";
       progressCount.innerHTML =
         '<span class="num">' + done + '</span> / <span class="num">20</span> 완료';
+    }
+
+    function updateTotal() {
+      var total = items.reduce(function (sum, it) { return sum + (it.amount || 0); }, 0);
+      totalValueEl.textContent = formatWon(total);
+    }
+
+    function parseAmountInput(raw) {
+      var digits = raw.replace(/[^0-9]/g, "");
+      if (!digits) return 0;
+      return parseInt(digits, 10);
     }
 
     function burstConfetti(stampEl, color) {
@@ -457,6 +606,17 @@
     }
 
     function render() {
+      var focusedIdx = -1, focusedField = null, caret = null;
+      var active = document.activeElement;
+      if (active && listEl.contains(active)) {
+        var row = active.closest(".row");
+        if (row) {
+          focusedIdx = Array.prototype.indexOf.call(listEl.children, row);
+          focusedField = active.classList.contains("amount-input") ? "amount" : (active.classList.contains("text-input") ? "text" : null);
+          if (typeof active.selectionStart === "number") caret = active.selectionStart;
+        }
+      }
+
       listEl.innerHTML = "";
       items.forEach(function (item, i) {
         var stampColor = STAMP_COLORS[i % STAMP_COLORS.length];
@@ -477,8 +637,30 @@
         input.setAttribute("aria-label", (i + 1) + "번째 하고 싶은 일");
         input.addEventListener("input", function () {
           items[i].text = input.value;
-          saveItems();
+          saveCache();
+          scheduleSync();
         });
+
+        var amountWrap = document.createElement("span");
+        amountWrap.className = "amount-wrap";
+
+        var amountInput = document.createElement("input");
+        amountInput.type = "text";
+        amountInput.inputMode = "numeric";
+        amountInput.className = "amount-input";
+        amountInput.placeholder = "0";
+        amountInput.value = item.amount ? item.amount.toLocaleString("ko-KR") : "";
+        amountInput.setAttribute("aria-label", (i + 1) + "번째 예상 금액");
+        amountInput.addEventListener("input", function () {
+          var value = parseAmountInput(amountInput.value);
+          items[i].amount = value;
+          amountInput.value = value ? value.toLocaleString("ko-KR") : "";
+          saveCache();
+          updateTotal();
+          scheduleSync();
+        });
+
+        amountWrap.appendChild(amountInput);
 
         var stampLabel = document.createElement("label");
         stampLabel.className = "stamp";
@@ -493,7 +675,8 @@
           li.classList.toggle("done", checkbox.checked);
           if (checkbox.checked) burstConfetti(stampLabel, stampColor);
           updateProgress();
-          saveItems();
+          saveCache();
+          scheduleSync();
         });
 
         var mark = document.createElement("span");
@@ -506,10 +689,24 @@
 
         li.appendChild(idx);
         li.appendChild(input);
+        li.appendChild(amountWrap);
         li.appendChild(stampLabel);
         listEl.appendChild(li);
       });
       updateProgress();
+      updateTotal();
+
+      if (focusedIdx >= 0 && listEl.children[focusedIdx]) {
+        var fieldEl = listEl.children[focusedIdx].querySelector(
+          focusedField === "amount" ? ".amount-input" : ".text-input"
+        );
+        if (fieldEl) {
+          fieldEl.focus();
+          if (caret !== null && typeof fieldEl.setSelectionRange === "function") {
+            try { fieldEl.setSelectionRange(caret, caret); } catch (e) {}
+          }
+        }
+      }
     }
 
     function showToast(msg) {
@@ -521,21 +718,89 @@
       }, 2600);
     }
 
+    function scheduleSync() {
+      pendingSave = true;
+      setSyncStatus("saving", "저장 준비 중…");
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(doSync, 700);
+    }
+
+    function doSync() {
+      pendingSave = false;
+      setSyncStatus("saving", "저장 중…");
+      fetch(API_BASE + "/wishlist", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: items })
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error("save failed");
+          return res.json();
+        })
+        .then(function (record) {
+          isOnline = true;
+          lastUpdatedAt = record.updatedAt;
+          setSyncStatus("", "☁ 저장됨 · " + formatTime(record.updatedAt));
+        })
+        .catch(function () {
+          isOnline = false;
+          setSyncStatus("offline", "저장 실패 — 이 기기에만 보관 중, 다시 연결되면 자동 저장");
+        });
+    }
+
+    function applyRemote(record, opts) {
+      opts = opts || {};
+      var normalized = normalize(record.items);
+      if (!normalized) return;
+      if (lastUpdatedAt && record.updatedAt && record.updatedAt <= lastUpdatedAt && !opts.force) return;
+      items = normalized;
+      lastUpdatedAt = record.updatedAt;
+      saveCache();
+      if (!anyInputFocused() || opts.force) {
+        render();
+      }
+      setSyncStatus("", record.updatedAt ? "☁ 불러옴 · " + formatTime(record.updatedAt) : "");
+    }
+
+    function fetchRemote(opts) {
+      return fetch(API_BASE + "/wishlist")
+        .then(function (res) {
+          if (!res.ok) throw new Error("load failed");
+          return res.json();
+        })
+        .then(function (record) {
+          isOnline = true;
+          if (record.items === null) {
+            setSyncStatus("", "☁ 첫 저장 대기 중");
+            doSync();
+            return;
+          }
+          applyRemote(record, opts);
+        })
+        .catch(function () {
+          isOnline = false;
+          setSyncStatus("offline", "서버에 연결할 수 없어요 — 이 기기의 마지막 저장 내용을 보여줍니다");
+        });
+    }
+
     function buildShareText() {
       var done = items.filter(function (it) { return it.done; }).length;
+      var total = items.reduce(function (sum, it) { return sum + (it.amount || 0); }, 0);
       var lines = items.map(function (it, i) {
         var mark = it.done ? "[x]" : "[ ]";
         var label = it.text && it.text.trim() ? it.text.trim() : "(미입력)";
-        return mark + " " + pad2(i + 1) + ". " + label;
+        var amountStr = it.amount ? " (" + it.amount.toLocaleString("ko-KR") + "원)" : "";
+        return mark + " " + pad2(i + 1) + ". " + label + amountStr;
       });
-      return "내가 하고 싶은 20가지 (" + done + "/20 완료)\n\n" + lines.join("\n");
+      return "내가 하고 싶은 20가지 (" + done + "/20 완료, 합계 " + total.toLocaleString("ko-KR") + "원)\n\n" +
+        lines.join("\n") + "\n\n" + location.href;
     }
 
     document.getElementById("shareBtn").addEventListener("click", async function () {
       var text = buildShareText();
       if (navigator.share) {
         try {
-          await navigator.share({ title: "내가 하고 싶은 20가지", text: text });
+          await navigator.share({ title: "내가 하고 싶은 20가지", text: text, url: location.href });
           return;
         } catch (e) {
           if (e && e.name === "AbortError") return;
@@ -549,6 +814,17 @@
       }
     });
 
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible" && !pendingSave) fetchRemote();
+    });
+    window.addEventListener("focus", function () {
+      if (!pendingSave) fetchRemote();
+    });
+    setInterval(function () {
+      if (!pendingSave && !anyInputFocused()) fetchRemote();
+    }, POLL_MS);
+
     render();
+    fetchRemote({ force: true });
   })();
 </script>
