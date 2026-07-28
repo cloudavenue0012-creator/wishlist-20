@@ -203,6 +203,18 @@
   .sync-status.saving .sync-dot { background: #ffb238; }
   .sync-status.offline .sync-dot { background: #cfc2b4; }
 
+  .legacy-note {
+    margin: 8px 2px 0;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--accent-wash);
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--ink);
+    position: relative;
+    z-index: 1;
+  }
+
   .list {
     list-style: none;
     margin: 0;
@@ -473,6 +485,7 @@
       <span class="total-value" id="totalValue">0원</span>
     </div>
     <p class="sync-status" id="syncStatus"><span class="sync-dot"></span><span id="syncText">불러오는 중…</span></p>
+    <p class="legacy-note" id="legacyNote" style="display:none;"></p>
   </header>
 
   <ol class="list" id="list"></ol>
@@ -554,10 +567,15 @@
 
     var items = loadCache() || defaults.slice();
     var restoredFromLegacy = false;
-    if (!localStorage.getItem(CACHE_KEY)) {
-      // 이 기기에서 새 버전으로 처음 여는 경우에만: 옛 로컬 데이터가 지금 것보다 알차면 복원
-      var legacy = loadLegacy();
-      if (legacy && countFilled(legacy) > countFilled(items)) {
+    var legacyFound = false;
+    var legacyFilled = 0;
+    // 매번(첫 방문이 아니어도) 확인 — v2 캐시가 이미 생겨있어도(예: 이 코드 배포 전에 한 번
+    // 열어서 빈 값으로 캐시가 먼저 써진 경우) 옛 데이터가 지금보다 알차면 항상 복원한다.
+    var legacy = loadLegacy();
+    if (legacy) {
+      legacyFound = true;
+      legacyFilled = countFilled(legacy);
+      if (legacyFilled > countFilled(items)) {
         items = legacy;
         saveCache();
         restoredFromLegacy = true;
@@ -925,7 +943,23 @@
         });
     }
 
+    function showLegacyDiagnostic() {
+      var el = document.getElementById("legacyNote");
+      if (!el) return;
+      var msg;
+      if (restoredFromLegacy) {
+        msg = "✅ 이 브라우저에 저장돼 있던 이전 내용을 복원했어요 (" + legacyFilled + "개 항목).";
+      } else if (legacyFound) {
+        msg = "이 브라우저에 이전 데이터가 남아있지만(" + legacyFilled + "개), 지금 내용이 더 많아 그대로 뒀어요.";
+      } else {
+        msg = "⚠ 이 브라우저에는 이전에 저장된 내용이 없어요. 카카오톡 안에서 링크를 눌렀다면, 링크를 길게 눌러 \"다른 브라우저로 열기\"(사파리/크롬)로 열었던 그 앱에서 다시 열어보세요.";
+      }
+      el.textContent = msg;
+      el.style.display = "block";
+    }
+
     render();
+    showLegacyDiagnostic();
     initialSync();
   })();
 </script>
