@@ -525,7 +525,44 @@
       } catch (e) {}
     }
 
+    // 서버 동기화 도입 전(로컬스토리지 전용) 버전이 쓰던 옛 키. 그 시절 이 기기에
+    // 저장해둔 내용이 남아있으면 살려서 쓴다 — amount 필드가 없던 스키마라 0으로 채움.
+    var LEGACY_KEY = "wishlist20-v1";
+
+    function loadLegacy() {
+      try {
+        var raw = localStorage.getItem(LEGACY_KEY);
+        if (!raw) return null;
+        var parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed) || parsed.length !== 20) return null;
+        return parsed.map(function (it) {
+          return {
+            text: typeof it.text === "string" ? it.text : "",
+            amount: 0,
+            done: !!it.done
+          };
+        });
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function countFilled(list) {
+      if (!list) return 0;
+      return list.filter(function (it) { return (it.text && it.text.trim()) || it.amount; }).length;
+    }
+
     var items = loadCache() || defaults.slice();
+    var restoredFromLegacy = false;
+    if (!localStorage.getItem(CACHE_KEY)) {
+      // 이 기기에서 새 버전으로 처음 여는 경우에만: 옛 로컬 데이터가 지금 것보다 알차면 복원
+      var legacy = loadLegacy();
+      if (legacy && countFilled(legacy) > countFilled(items)) {
+        items = legacy;
+        saveCache();
+        restoredFromLegacy = true;
+      }
+    }
     var lastUpdatedAt = null;
     var syncing = false;
     var pendingSave = false;
@@ -858,7 +895,37 @@
     });
     setInterval(function () { fetchRemote(); }, POLL_MS);
 
+    function initialSync() {
+      fetch(API_BASE + "/wishlist")
+        .then(function (res) {
+          if (!res.ok) throw new Error("load failed");
+          return res.json();
+        })
+        .then(function (record) {
+          isOnline = true;
+          var remoteItems = record.items ? normalize(record.items) : null;
+          var remoteFilled = countFilled(remoteItems);
+          var localFilled = countFilled(items);
+          if (!remoteItems || localFilled > remoteFilled) {
+            // 이 기기의 내용(옛 로컬 데이터 복원 포함)이 서버보다 알참 — 서버를 이걸로 갱신
+            lastUpdatedAt = record.updatedAt || null;
+            doSync();
+            if (restoredFromLegacy) showToast("이전에 저장했던 내용을 복원했어요");
+          } else {
+            items = remoteItems;
+            lastUpdatedAt = record.updatedAt;
+            saveCache();
+            render();
+            setSyncStatus("", record.updatedAt ? "☁ 불러옴 · " + formatTime(record.updatedAt) : "");
+          }
+        })
+        .catch(function () {
+          isOnline = false;
+          setSyncStatus("offline", "서버에 연결할 수 없어요 — 이 기기의 마지막 저장 내용을 보여줍니다");
+        });
+    }
+
     render();
-    fetchRemote({ force: true });
+    initialSync();
   })();
 </script>
