@@ -587,6 +587,18 @@
       return parseInt(digits, 10);
     }
 
+    function caretPosForDigitCount(str, digitCount) {
+      if (digitCount <= 0) return 0;
+      var seen = 0;
+      for (var p = 0; p < str.length; p++) {
+        if (/[0-9]/.test(str[p])) {
+          seen++;
+          if (seen === digitCount) return p + 1;
+        }
+      }
+      return str.length;
+    }
+
     function burstConfetti(stampEl, color) {
       if (reduceMotion) return;
       var palette = [color, "#ffd166", "#ff6f81", "#3fbf96"];
@@ -640,6 +652,7 @@
           saveCache();
           scheduleSync();
         });
+        input.addEventListener("blur", flushSync);
 
         var amountWrap = document.createElement("span");
         amountWrap.className = "amount-wrap";
@@ -652,13 +665,19 @@
         amountInput.value = item.amount ? item.amount.toLocaleString("ko-KR") : "";
         amountInput.setAttribute("aria-label", (i + 1) + "번째 예상 금액");
         amountInput.addEventListener("input", function () {
+          var caretBefore = amountInput.selectionStart == null ? amountInput.value.length : amountInput.selectionStart;
+          var digitsBeforeCaret = amountInput.value.slice(0, caretBefore).replace(/[^0-9]/g, "").length;
           var value = parseAmountInput(amountInput.value);
+          var formatted = value ? value.toLocaleString("ko-KR") : "";
           items[i].amount = value;
-          amountInput.value = value ? value.toLocaleString("ko-KR") : "";
+          amountInput.value = formatted;
+          var newCaret = caretPosForDigitCount(formatted, digitsBeforeCaret);
+          try { amountInput.setSelectionRange(newCaret, newCaret); } catch (e) {}
           saveCache();
           updateTotal();
           scheduleSync();
         });
+        amountInput.addEventListener("blur", flushSync);
 
         amountWrap.appendChild(amountInput);
 
@@ -677,6 +696,7 @@
           updateProgress();
           saveCache();
           scheduleSync();
+          flushSync();
         });
 
         var mark = document.createElement("span");
@@ -725,13 +745,22 @@
       saveTimer = setTimeout(doSync, 700);
     }
 
-    function doSync() {
+    function flushSync() {
+      if (!pendingSave) return;
+      if (saveTimer) clearTimeout(saveTimer);
+      doSync();
+    }
+
+    function doSync(opts) {
+      opts = opts || {};
       pendingSave = false;
       setSyncStatus("saving", "저장 중…");
+      var snapshot = items;
       fetch(API_BASE + "/wishlist", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: items })
+        body: JSON.stringify({ items: snapshot }),
+        keepalive: opts.keepalive === true
       })
         .then(function (res) {
           if (!res.ok) throw new Error("save failed");
@@ -750,19 +779,21 @@
 
     function applyRemote(record, opts) {
       opts = opts || {};
+      // 지금 입력 중(포커스)이거나 저장 대기 중인 로컬 변경이 있으면, 서버 값으로 절대 덮어쓰지 않는다.
+      if (!opts.force && (pendingSave || anyInputFocused())) return;
       var normalized = normalize(record.items);
       if (!normalized) return;
       if (lastUpdatedAt && record.updatedAt && record.updatedAt <= lastUpdatedAt && !opts.force) return;
       items = normalized;
       lastUpdatedAt = record.updatedAt;
       saveCache();
-      if (!anyInputFocused() || opts.force) {
-        render();
-      }
+      render();
       setSyncStatus("", record.updatedAt ? "☁ 불러옴 · " + formatTime(record.updatedAt) : "");
     }
 
     function fetchRemote(opts) {
+      opts = opts || {};
+      if (!opts.force && (pendingSave || anyInputFocused())) return Promise.resolve();
       return fetch(API_BASE + "/wishlist")
         .then(function (res) {
           if (!res.ok) throw new Error("load failed");
@@ -815,14 +846,17 @@
     });
 
     document.addEventListener("visibilitychange", function () {
-      if (document.visibilityState === "visible" && !pendingSave) fetchRemote();
+      if (document.visibilityState === "visible") {
+        fetchRemote();
+      } else {
+        flushSync();
+      }
     });
-    window.addEventListener("focus", function () {
-      if (!pendingSave) fetchRemote();
+    window.addEventListener("focus", function () { fetchRemote(); });
+    window.addEventListener("pagehide", function () {
+      if (pendingSave) doSync({ keepalive: true });
     });
-    setInterval(function () {
-      if (!pendingSave && !anyInputFocused()) fetchRemote();
-    }, POLL_MS);
+    setInterval(function () { fetchRemote(); }, POLL_MS);
 
     render();
     fetchRemote({ force: true });
